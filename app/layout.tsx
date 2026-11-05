@@ -1,5 +1,9 @@
 import type { Metadata } from "next"
-import { Be_Vietnam_Pro, Bricolage_Grotesque, Geist_Mono } from "next/font/google"
+import {
+  Be_Vietnam_Pro,
+  Bricolage_Grotesque,
+  Geist_Mono,
+} from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -39,7 +43,7 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={cn(
-        "antialiased font-sans",
+        "font-sans antialiased",
         bodyFont.variable,
         displayFont.variable,
         fontMono.variable

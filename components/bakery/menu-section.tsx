@@ -1,8 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
-import { Plus } from "lucide-react"
+import { useRef, useState } from "react"
+import { Check, Plus } from "lucide-react"
 
 import {
   categoryLabels,
@@ -12,6 +12,7 @@ import {
   tileClass,
   type FilterId,
 } from "@/lib/bakery-data"
+import { useCart } from "@/lib/cart"
 import { cn } from "@/lib/utils"
 
 export function MenuSection() {
@@ -85,13 +86,7 @@ export function MenuSection() {
                 <p className="text-[0.95rem] text-cocoa-soft">{p.desc}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="font-semibold">{formatPrice(p.price)}</span>
-                  <button
-                    type="button"
-                    aria-label={`Thêm ${p.name} vào giỏ`}
-                    className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-cocoa text-cream hover:bg-cocoa/90"
-                  >
-                    <Plus className="size-5" aria-hidden="true" />
-                  </button>
+                  <AddToCartButton id={p.id} name={p.name} />
                 </div>
               </div>
             </article>
@@ -99,5 +94,47 @@ export function MenuSection() {
         </div>
       </div>
     </section>
+  )
+}
+
+function AddToCartButton({ id, name }: { id: number; name: string }) {
+  const { add, lines } = useCart()
+  const [justAdded, setJustAdded] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const inCart = lines.find((l) => l.id === id)?.qty ?? 0
+
+  function handleClick() {
+    add(id)
+    setJustAdded(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setJustAdded(false), 1200)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {inCart > 0 && (
+        <span className="rounded-full bg-tile-bread px-2.5 py-1 text-xs font-semibold">
+          {inCart} trong giỏ
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={`Thêm ${name} vào giỏ`}
+        className={cn(
+          "flex size-11 cursor-pointer items-center justify-center rounded-full text-cream transition-colors active:scale-95",
+          justAdded ? "bg-berry" : "bg-cocoa hover:bg-cocoa/90"
+        )}
+      >
+        {justAdded ? (
+          <Check className="size-5 animate-in zoom-in-50" aria-hidden="true" />
+        ) : (
+          <Plus className="size-5" aria-hidden="true" />
+        )}
+      </button>
+      <span role="status" className="sr-only">
+        {justAdded ? `Đã thêm ${name} vào giỏ` : ""}
+      </span>
+    </div>
   )
 }

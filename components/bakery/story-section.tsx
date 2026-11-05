@@ -27,13 +27,18 @@ export function StorySection() {
           Một căn bếp nhỏ, một mẻ bột mỗi sáng.
         </h2>
         <p className="text-[1.05rem] text-cocoa-soft">
-          [Viết vài câu về người làm bánh, tiệm mở từ khi nào và điều khiến bánh của tiệm khác
-          biệt.]
+          [Viết vài câu về người làm bánh, tiệm mở từ khi nào và điều khiến bánh
+          của tiệm khác biệt.]
         </p>
         <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
           {points.map((pt) => (
-            <div key={pt.title} className="flex flex-col gap-1 border-t-2 border-cocoa pt-3.5">
-              <span className="font-display text-[1.15rem] font-bold">{pt.title}</span>
+            <div
+              key={pt.title}
+              className="flex flex-col gap-1 border-t-2 border-cocoa pt-3.5"
+            >
+              <span className="font-display text-[1.15rem] font-bold">
+                {pt.title}
+              </span>
               <span className="text-[0.95rem] text-cocoa-soft">{pt.text}</span>
             </div>
           ))}

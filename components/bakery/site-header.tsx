@@ -1,3 +1,4 @@
+import { CartButton } from "./cart-button"
 import { CakeLogo } from "./icons"
 
 const links = [
@@ -9,7 +10,7 @@ const links = [
 
 export function SiteHeader() {
   return (
-    <header className="z-50 md:sticky md:top-0 border-b border-line bg-cream/85 backdrop-blur-md supports-[backdrop-filter]:bg-cream/75">
+    <header className="z-50 border-b border-line bg-cream/85 backdrop-blur-md supports-[backdrop-filter]:bg-cream/75 md:sticky md:top-0">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-[18px]">
         <a href="#top" className="flex items-center gap-2.5 text-cocoa">
           <span className="flex size-10 items-center justify-center rounded-full bg-sun">
@@ -24,10 +25,15 @@ export function SiteHeader() {
           className="flex flex-wrap items-center gap-x-6 gap-y-1 font-medium"
         >
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="py-2.5 text-cocoa hover:text-berry">
+            <a
+              key={l.href}
+              href={l.href}
+              className="py-2.5 text-cocoa hover:text-berry"
+            >
               {l.label}
             </a>
           ))}
+          <CartButton />
           <a
             href="#dat-banh"
             className="rounded-full bg-cocoa px-5 py-2.5 font-semibold text-cream hover:bg-cocoa/90"

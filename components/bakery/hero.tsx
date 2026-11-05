@@ -18,8 +18,8 @@ export function Hero() {
           Bánh nướng mỗi ngày, thơm từ đầu ngõ.
         </h1>
         <p className="max-w-[30rem] text-[1.15rem] text-cocoa-soft">
-          Bánh mì giòn vỏ, bánh ngọt kiểu Pháp và bánh kem làm theo yêu cầu — nhồi bột,
-          nướng và trang trí ngay tại tiệm.
+          Bánh mì giòn vỏ, bánh ngọt kiểu Pháp và bánh kem làm theo yêu cầu —
+          nhồi bột, nướng và trang trí ngay tại tiệm.
         </p>
         <div className="flex flex-wrap gap-3">
           <a
@@ -52,7 +52,9 @@ export function Hero() {
           <span className="text-[0.8rem] font-semibold tracking-[0.08em] text-berry uppercase">
             Bánh của ngày
           </span>
-          <span className="font-display text-[1.35rem] font-bold">{featured.name}</span>
+          <span className="font-display text-[1.35rem] font-bold">
+            {featured.name}
+          </span>
           <span className="text-cocoa-soft">{formatPrice(featured.price)}</span>
         </div>
       </div>
