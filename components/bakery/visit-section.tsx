@@ -16,7 +16,9 @@ export function VisitSection() {
           }
           title="Địa chỉ"
         >
-          <p className="text-cocoa-soft">[ĐỊA CHỈ TIỆM]</p>
+          <p className="text-cocoa-soft">
+            Thôn Yên Thịnh - Xã Bắc Lũng - Tp. Bắc Ninh
+          </p>
           <a
             href="#ghe-tiem"
             className="font-semibold text-berry hover:text-berry-dark"
