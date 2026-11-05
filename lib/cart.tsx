@@ -1,116 +1,15 @@
 "use client"
 
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react"
+import { createContext, useContext, useEffect, useMemo } from "react"
 
 import type { Product } from "@/lib/bakery-data"
-import { MAX_QTY, type CartLine } from "@/lib/checkout"
+import type { CartLine } from "@/lib/checkout"
+import { useCartStore } from "@/stores/cart-store"
 
-// ---------- Store (kept in localStorage so the cart survives reloads) ----------
+// Cart state lives in the Zustand store (stores/cart-store.ts). This file joins
+// it with the current menu (from the Google Sheet) to get names, prices and totals.
 
-const KEY = "bo-bot-cart"
-const EMPTY: CartLine[] = []
-let lines: CartLine[] = EMPTY
-let loaded = false
-const listeners = new Set<() => void>()
-
-function sanitize(value: unknown): CartLine[] {
-  if (!Array.isArray(value)) return EMPTY
-  return value.flatMap((l) => {
-    const id = l?.id == null ? "" : String(l.id)
-    const qty = Math.min(MAX_QTY, Math.floor(Number(l?.qty)))
-    return id && qty > 0 ? [{ id, qty }] : []
-  })
-}
-
-function load() {
-  if (loaded) return
-  loaded = true
-  try {
-    lines = sanitize(JSON.parse(localStorage.getItem(KEY) ?? "[]"))
-  } catch {
-    lines = EMPTY
-  }
-}
-
-function commit(next: CartLine[]) {
-  lines = next
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next))
-  } catch {
-    // Private mode / storage full: the cart still works for this visit.
-  }
-  listeners.forEach((l) => l())
-}
-
-function subscribe(listener: () => void) {
-  load()
-  listeners.add(listener)
-  // Keep several open tabs in sync.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key !== KEY) return
-    loaded = false
-    load()
-    listener()
-  }
-  window.addEventListener("storage", onStorage)
-  return () => {
-    listeners.delete(listener)
-    window.removeEventListener("storage", onStorage)
-  }
-}
-
-function getSnapshot() {
-  load()
-  return lines
-}
-
-const getServerSnapshot = () => EMPTY
-
-const actions = {
-  add(id: string, qty = 1) {
-    const found = lines.find((l) => l.id === id)
-    commit(
-      found
-        ? lines.map((l) =>
-            l.id === id ? { ...l, qty: Math.min(MAX_QTY, l.qty + qty) } : l
-          )
-        : [...lines, { id, qty: Math.min(MAX_QTY, qty) }]
-    )
-  },
-  setQty(id: string, qty: number) {
-    if (qty <= 0) return actions.remove(id)
-    commit(
-      lines.map((l) =>
-        l.id === id ? { ...l, qty: Math.min(MAX_QTY, qty) } : l
-      )
-    )
-  },
-  remove(id: string) {
-    commit(lines.filter((l) => l.id !== id))
-  },
-  clear() {
-    commit(EMPTY)
-  },
-}
-
-// ---------- React API ----------
-
-type CartContextValue = typeof actions & {
-  lines: CartLine[]
-  items: (CartLine & { product: Product })[]
-  count: number
-  subtotal: number
-  open: boolean
-  setOpen: (open: boolean) => void
-}
-
-const CartContext = createContext<CartContextValue | null>(null)
+const ProductsContext = createContext<Product[] | null>(null)
 
 export function CartProvider({
   products,
@@ -120,35 +19,50 @@ export function CartProvider({
   products: Product[]
   children: React.ReactNode
 }) {
-  const current = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
-  )
-  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    // Load the saved cart, and keep several open tabs in sync.
+    void useCartStore.persist.rehydrate()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === useCartStore.persist.getOptions().name) {
+        void useCartStore.persist.rehydrate()
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
 
-  const value = useMemo<CartContextValue>(() => {
-    const items = current.flatMap((l) => {
+  return (
+    <ProductsContext.Provider value={products}>
+      {children}
+    </ProductsContext.Provider>
+  )
+}
+
+export function useCart() {
+  const products = useContext(ProductsContext)
+  if (!products) throw new Error("useCart must be used inside <CartProvider>")
+
+  const rawLines = useCartStore((s) => s.lines)
+  const open = useCartStore((s) => s.open)
+  const add = useCartStore((s) => s.add)
+  const setQty = useCartStore((s) => s.setQty)
+  const remove = useCartStore((s) => s.remove)
+  const clear = useCartStore((s) => s.clear)
+  const setOpen = useCartStore((s) => s.setOpen)
+
+  const derived = useMemo(() => {
+    const items = rawLines.flatMap((l) => {
       const product = products.find((p) => p.id === l.id)
       return product ? [{ ...l, product }] : []
     })
     return {
-      ...actions,
-      // Only lines still on the menu (these are what checkout sends).
-      lines: items.map(({ id, qty }) => ({ id, qty })),
       items,
+      // Only lines still on the menu (these are what checkout sends).
+      lines: items.map(({ id, qty }): CartLine => ({ id, qty })),
       count: items.reduce((s, i) => s + i.qty, 0),
       subtotal: items.reduce((s, i) => s + i.qty * i.product.price, 0),
-      open,
-      setOpen,
     }
-  }, [current, open, products])
+  }, [rawLines, products])
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
-}
-
-export function useCart() {
-  const ctx = useContext(CartContext)
-  if (!ctx) throw new Error("useCart must be used inside <CartProvider>")
-  return ctx
+  return { ...derived, open, setOpen, add, setQty, remove, clear }
 }
