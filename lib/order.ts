@@ -15,49 +15,6 @@ export type CakeDesign = {
   image: string | null
 }
 
-/**
- * Fallback designs, used when the "Mẫu bánh" sheet isn't set up or can't be read.
- * The live list comes from Google Sheets — see lib/catalog.ts.
- * Photos: Unsplash (free license), stored in /public/images/mau.
- */
-export const defaultCakeDesigns: CakeDesign[] = [
-  {
-    id: "socola-chay",
-    name: "Socola chảy",
-    desc: "Cốt socola, sốt ganache chảy, bắt kem bơ.",
-    priceFrom: 380000,
-    image: "/images/mau/socola-chay.jpg",
-  },
-  {
-    id: "kem-tuoi-berry",
-    name: "Kem tươi dâu rừng",
-    desc: "Kem tươi trắng, dâu tây và việt quất.",
-    priceFrom: 350000,
-    image: "/images/mau/kem-tuoi-berry.jpg",
-  },
-  {
-    id: "naked-hoa-tuoi",
-    name: "Naked cake hoa tươi",
-    desc: "Phủ kem mỏng, trang trí hoa và quả mọng.",
-    priceFrom: 420000,
-    image: "/images/mau/naked-hoa-tuoi.jpg",
-  },
-  {
-    id: "ombre-bat-bong",
-    name: "Ombre bắt bông",
-    desc: "Kem bơ chuyển màu, bắt bông từng tầng.",
-    priceFrom: 400000,
-    image: "/images/mau/ombre-bat-bong.jpg",
-  },
-  {
-    id: "pastel-sinh-nhat",
-    name: "Pastel sinh nhật",
-    desc: "Tông hồng, cốm màu, hợp tiệc của bé.",
-    priceFrom: 450000,
-    image: "/images/mau/pastel-sinh-nhat.jpg",
-  },
-]
-
 export const CUSTOM_DESIGN_ID = "mau-rieng"
 
 /** Always shown last, after the designs from the sheet; enables photo upload. */

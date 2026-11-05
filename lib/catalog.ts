@@ -1,51 +1,47 @@
-// Server-only: loads the menu and cake designs from Google Sheets.
+// Server-only: loads the menu and cake designs from one Google Sheet tab.
 //
-// Tab "Thực đơn"  columns: id, loai, ten, mota, gia, anh, hien
-// Tab "Mẫu bánh"  columns: id, ten, mota, gia_tu, anh, hien
-// Header names are matched loosely: "Mô tả" = "mota", "Giá từ" = "gia_tu".
+// Columns: id, loai, ten, mota, gia, anh, hien, type
+//   type = "menu" (or empty) → item in "Thực đơn"   (loai: mi / ngot / kem)
+//   type = "mau"             → design in "Chọn mẫu bánh" (gia = "từ …" price,
+//                              empty = "Báo giá sau"; loai is ignored)
+// Header names are matched loosely ("Mô tả" = "mota", "Loại" = "loai").
 //
-// Links can be overridden with MENU_SHEET_URL / DESIGNS_SHEET_URL. Either the
-// normal sheet link (shared "Anyone with the link") or a "Publish to web → CSV"
-// link works; the tab is picked by its gid (the number after #gid= in the URL).
-// Data is re-read at most every 5 minutes. If a sheet is missing or broken, the
-// last good data is used. The menu has no fallback in code: if it can't be read
-// the page render fails, so Next keeps serving the previous version of the page
-// (and a deploy fails loudly instead of publishing an empty menu).
+// The link can be overridden with MENU_SHEET_URL: either the normal sheet link
+// (shared "Anyone with the link") or a "Publish to web → CSV" link; the tab is
+// picked by its gid (the number after #gid= in the URL).
+// Data is re-read at most every 5 minutes. If the sheet can't be read, the last
+// good data is used; with none, the page render fails so Next keeps serving the
+// previous version of the page (and a deploy fails instead of publishing an
+// empty menu).
 
 import type { CategoryId, Product } from "@/lib/bakery-data"
 import { resolveImage } from "@/lib/images"
-import { customDesign, defaultCakeDesigns, type CakeDesign } from "@/lib/order"
+import { customDesign, type CakeDesign } from "@/lib/order"
 
-const SHOP_SHEET =
-  "https://docs.google.com/spreadsheets/d/1D5wW5ultf9gpHzrmqmJhwynVQTRjn4YnCC3vloSz414/edit"
-
-/** Tab "Thực đơn" (gid=0). */
-const MENU_SHEET_URL = process.env.MENU_SHEET_URL || `${SHOP_SHEET}#gid=0`
-/** Tab "Mẫu bánh": set its link here (or in env) once the tab exists. */
-const DESIGNS_SHEET_URL = process.env.DESIGNS_SHEET_URL || ""
+const SHEET_URL =
+  process.env.MENU_SHEET_URL ||
+  "https://docs.google.com/spreadsheets/d/1D5wW5ultf9gpHzrmqmJhwynVQTRjn4YnCC3vloSz414/edit#gid=0"
 
 export const CATALOG_REVALIDATE_SECONDS = 300
 
 // ---------- Public API ----------
 
 export async function getProducts(): Promise<Product[]> {
-  return loadSheet("menu", MENU_SHEET_URL, toProduct, null)
+  const products = await loadItems("menu", "menu", toProduct)
+  if (products.length === 0) throw new Error("[catalog:menu] no valid rows")
+  return products
 }
 
 /** Designs from the sheet, plus the "Theo mẫu riêng" option at the end. */
 export async function getCakeDesigns(): Promise<CakeDesign[]> {
-  const designs = await loadSheet(
-    "designs",
-    DESIGNS_SHEET_URL,
-    toDesign,
-    defaultCakeDesigns
-  )
+  const designs = await loadItems("designs", "mau", toDesign)
   return [...designs.filter((d) => d.id !== customDesign.id), customDesign]
 }
 
 // ---------- Row → object ----------
 
 type Row = Record<string, string>
+type RowType = "menu" | "mau"
 
 const categoryAliases: Record<string, CategoryId> = {
   mi: "mi",
@@ -54,6 +50,14 @@ const categoryAliases: Record<string, CategoryId> = {
   "banh ngot": "ngot",
   kem: "kem",
   "banh kem": "kem",
+}
+
+/** Empty / "menu" / "thuc don" → menu; "mau" / "mau banh" → design. */
+function rowType(row: Row): RowType | null {
+  const t = normalize(row.type)
+  if (!t || t === "menu" || t === "thuc don") return "menu"
+  if (t === "mau" || t === "mau banh") return "mau"
+  return null
 }
 
 function toProduct(row: Row, index: number): Product | null {
@@ -78,7 +82,7 @@ function toDesign(row: Row, index: number): CakeDesign | null {
     id: row.id?.trim() || `mau-${index + 2}`,
     name,
     desc: row.mota?.trim() ?? "",
-    priceFrom: parsePrice(row.giatu),
+    priceFrom: parsePrice(row.gia || row.giatu),
     image: resolveImage(row.anh),
   }
 }
@@ -87,20 +91,14 @@ function toDesign(row: Row, index: number): CakeDesign | null {
 
 const lastGood = new Map<string, unknown[]>()
 
-async function loadSheet<T extends { id: string }>(
+/** Reads the sheet (fetch is cached and shared by both callers) and maps one kind of row. */
+async function loadItems<T extends { id: string }>(
   key: string,
-  url: string,
-  toItem: (row: Row, index: number) => T | null,
-  /** null = no fallback: throw if the sheet can't be read. */
-  fallback: T[] | null
+  type: RowType,
+  toItem: (row: Row, index: number) => T | null
 ): Promise<T[]> {
-  if (!url) {
-    if (fallback) return fallback
-    throw new Error(`[catalog:${key}] no sheet URL configured`)
-  }
-
   try {
-    const res = await fetch(toCsvUrl(url), {
+    const res = await fetch(toCsvUrl(SHEET_URL), {
       next: { revalidate: CATALOG_REVALIDATE_SECONDS, tags: ["catalog"] },
       signal: AbortSignal.timeout(10_000),
     })
@@ -113,19 +111,26 @@ async function loadSheet<T extends { id: string }>(
     const items: T[] = []
     const seen = new Set<string>()
     parseCsv(text).forEach((row, i) => {
-      if (isHidden(row.hien)) return
+      const line = i + 2 // header is line 1
+      if (!Object.values(row).some((v) => v.trim())) return // blank line
+      const kind = rowType(row)
+      if (kind === null && type === "menu") {
+        console.warn(
+          `[catalog] skipped line ${line}: unknown type "${row.type}"`
+        )
+      }
+      if (kind !== type || isHidden(row.hien)) return
+
       const item = toItem(row, i)
       if (!item) {
-        if (Object.values(row).some((v) => v.trim())) {
-          console.warn(
-            `[catalog:${key}] skipped row ${i + 2}: missing or invalid fields`
-          )
-        }
+        console.warn(
+          `[catalog:${key}] skipped line ${line}: missing or invalid fields`
+        )
         return
       }
       if (seen.has(item.id)) {
         console.warn(
-          `[catalog:${key}] skipped row ${i + 2}: duplicate id "${item.id}"`
+          `[catalog:${key}] skipped line ${line}: duplicate id "${item.id}"`
         )
         return
       }
@@ -133,11 +138,10 @@ async function loadSheet<T extends { id: string }>(
       items.push(item)
     })
 
-    if (items.length === 0) throw new Error("no valid rows")
     lastGood.set(key, items)
     return items
   } catch (err) {
-    const previous = (lastGood.get(key) as T[] | undefined) ?? fallback
+    const previous = lastGood.get(key) as T[] | undefined
     if (!previous) {
       throw new Error(`[catalog:${key}] could not load sheet`, { cause: err })
     }
