@@ -8,13 +8,11 @@
 // normal sheet link (shared "Anyone with the link") or a "Publish to web → CSV"
 // link works; the tab is picked by its gid (the number after #gid= in the URL).
 // Data is re-read at most every 5 minutes. If a sheet is missing or broken, the
-// last good data (or the defaults in code) is used so the site never goes blank.
+// last good data is used. The menu has no fallback in code: if it can't be read
+// the page render fails, so Next keeps serving the previous version of the page
+// (and a deploy fails loudly instead of publishing an empty menu).
 
-import {
-  defaultProducts,
-  type CategoryId,
-  type Product,
-} from "@/lib/bakery-data"
+import type { CategoryId, Product } from "@/lib/bakery-data"
 import { resolveImage } from "@/lib/images"
 import { customDesign, defaultCakeDesigns, type CakeDesign } from "@/lib/order"
 
@@ -31,7 +29,7 @@ export const CATALOG_REVALIDATE_SECONDS = 300
 // ---------- Public API ----------
 
 export async function getProducts(): Promise<Product[]> {
-  return loadSheet("menu", MENU_SHEET_URL, toProduct, defaultProducts)
+  return loadSheet("menu", MENU_SHEET_URL, toProduct, null)
 }
 
 /** Designs from the sheet, plus the "Theo mẫu riêng" option at the end. */
@@ -93,9 +91,13 @@ async function loadSheet<T extends { id: string }>(
   key: string,
   url: string,
   toItem: (row: Row, index: number) => T | null,
-  fallback: T[]
+  /** null = no fallback: throw if the sheet can't be read. */
+  fallback: T[] | null
 ): Promise<T[]> {
-  if (!url) return fallback
+  if (!url) {
+    if (fallback) return fallback
+    throw new Error(`[catalog:${key}] no sheet URL configured`)
+  }
 
   try {
     const res = await fetch(toCsvUrl(url), {
@@ -135,8 +137,15 @@ async function loadSheet<T extends { id: string }>(
     lastGood.set(key, items)
     return items
   } catch (err) {
-    console.error(`[catalog:${key}] could not load sheet, using fallback:`, err)
-    return (lastGood.get(key) as T[] | undefined) ?? fallback
+    const previous = (lastGood.get(key) as T[] | undefined) ?? fallback
+    if (!previous) {
+      throw new Error(`[catalog:${key}] could not load sheet`, { cause: err })
+    }
+    console.error(
+      `[catalog:${key}] could not load sheet, using last data:`,
+      err
+    )
+    return previous
   }
 }
 

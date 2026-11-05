@@ -42,7 +42,13 @@ export async function submitCartOrder(
   const errors: Partial<Record<CheckoutField, string>> = {}
 
   // --- Items (priced from the live menu) ---
-  const products = await getProducts()
+  let products: Awaited<ReturnType<typeof getProducts>>
+  try {
+    products = await getProducts()
+  } catch (err) {
+    console.error("[checkout] menu unavailable", err)
+    return { status: "error", message: sendErrorMessage.failed, fields }
+  }
   let lines: { name: string; qty: number; price: number }[] = []
   try {
     const raw = JSON.parse(get("items") || "[]") as unknown
