@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { useRef, useState } from "react"
 import { Check, Plus } from "lucide-react"
 
@@ -8,14 +7,17 @@ import {
   categoryLabels,
   filters,
   formatPrice,
-  products,
   tileClass,
   type FilterId,
+  type Product,
 } from "@/lib/bakery-data"
 import { useCart } from "@/lib/cart"
 import { cn } from "@/lib/utils"
 
-export function MenuSection() {
+import { CakeLogo } from "./icons"
+import { SmartImage } from "./smart-image"
+
+export function MenuSection({ products }: { products: Product[] }) {
   const [cat, setCat] = useState<FilterId>("all")
   const shown = products.filter((p) => cat === "all" || p.cat === cat)
 
@@ -68,12 +70,17 @@ export function MenuSection() {
                   tileClass[p.cat]
                 )}
               >
-                <Image
+                <SmartImage
                   src={p.image}
                   alt={p.name}
                   fill
                   sizes="(min-width: 1200px) 280px, (min-width: 640px) 45vw, 100vw"
                   className="object-cover"
+                  fallback={
+                    <span className="flex h-full items-center justify-center">
+                      <CakeLogo className="size-14 text-cocoa/60" />
+                    </span>
+                  }
                 />
               </div>
               <div className="flex flex-col gap-1.5 px-2 pb-2">
@@ -92,12 +99,17 @@ export function MenuSection() {
             </article>
           ))}
         </div>
+        {shown.length === 0 && (
+          <p className="rounded-[28px] bg-cream px-6 py-10 text-center text-cocoa-soft">
+            Hôm nay loại bánh này tạm hết, bạn xem các loại khác nhé.
+          </p>
+        )}
       </div>
     </section>
   )
 }
 
-function AddToCartButton({ id, name }: { id: number; name: string }) {
+function AddToCartButton({ id, name }: { id: string; name: string }) {
   const { add, lines } = useCart()
   const [justAdded, setJustAdded] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)

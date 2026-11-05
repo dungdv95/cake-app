@@ -17,18 +17,23 @@ export const tileClass: Record<CategoryId, string> = {
 }
 
 export type Product = {
-  id: number
+  id: string
   cat: CategoryId
   name: string
   desc: string
   price: number
-  image: string
+  /** Local path (/images/…) or remote URL; null = coloured tile only. */
+  image: string | null
 }
 
-// Photos: Unsplash (free license), stored in /public/images.
-export const products: Product[] = [
+/**
+ * Fallback menu, used only when the Google Sheet can't be read.
+ * The live menu comes from Google Sheets — see lib/catalog.ts.
+ * Photos: Unsplash (free license), stored in /public/images.
+ */
+export const defaultProducts: Product[] = [
   {
-    id: 1,
+    id: "1",
     cat: "mi",
     name: "Croissant bơ",
     desc: "Nhiều lớp bột ngàn lớp, vỏ giòn, ruột mềm thơm bơ.",
@@ -36,7 +41,7 @@ export const products: Product[] = [
     image: "/images/croissant-bo.jpg",
   },
   {
-    id: 2,
+    id: "2",
     cat: "mi",
     name: "Bánh mì hoa cúc",
     desc: "Mềm xốp, ngọt nhẹ, hợp ăn sáng với trà hay cà phê.",
@@ -44,7 +49,7 @@ export const products: Product[] = [
     image: "/images/banh-mi-hoa-cuc.jpg",
   },
   {
-    id: 3,
+    id: "3",
     cat: "mi",
     name: "Bánh mì bơ tỏi",
     desc: "Phết bơ tỏi phô mai, nướng vàng thơm lừng.",
@@ -52,7 +57,7 @@ export const products: Product[] = [
     image: "/images/banh-mi-bo-toi.jpg",
   },
   {
-    id: 4,
+    id: "4",
     cat: "ngot",
     name: "Tart trứng",
     desc: "Đế giòn, nhân trứng sữa béo mịn, ăn nóng là ngon nhất.",
@@ -60,7 +65,7 @@ export const products: Product[] = [
     image: "/images/tart-trung.jpg",
   },
   {
-    id: 5,
+    id: "5",
     cat: "ngot",
     name: "Su kem",
     desc: "Vỏ su mỏng, nhân kem vani mát lạnh.",
@@ -68,7 +73,7 @@ export const products: Product[] = [
     image: "/images/su-kem.jpg",
   },
   {
-    id: 6,
+    id: "6",
     cat: "ngot",
     name: "Bông lan trứng muối",
     desc: "Cốt bông lan mềm, sốt bơ, chà bông và trứng muối.",
@@ -76,7 +81,7 @@ export const products: Product[] = [
     image: "/images/bong-lan-trung-muoi.jpg",
   },
   {
-    id: 7,
+    id: "7",
     cat: "kem",
     name: "Bánh kem dâu",
     desc: "Cốt vani, kem tươi và dâu tây tươi.",
@@ -84,7 +89,7 @@ export const products: Product[] = [
     image: "/images/banh-kem-dau.jpg",
   },
   {
-    id: 8,
+    id: "8",
     cat: "kem",
     name: "Tiramisu",
     desc: "Kem mascarpone, cà phê và bột cacao.",

@@ -1,6 +1,7 @@
 "use server"
 
-import { formatPrice, products } from "@/lib/bakery-data"
+import { formatPrice } from "@/lib/bakery-data"
+import { getProducts } from "@/lib/catalog"
 import {
   fulfilmentLabels,
   MAX_QTY,
@@ -40,14 +41,15 @@ export async function submitCartOrder(
   }
   const errors: Partial<Record<CheckoutField, string>> = {}
 
-  // --- Items ---
+  // --- Items (priced from the live menu) ---
+  const products = await getProducts()
   let lines: { name: string; qty: number; price: number }[] = []
   try {
     const raw = JSON.parse(get("items") || "[]") as unknown
     if (!Array.isArray(raw) || raw.length === 0 || raw.length > products.length)
       throw 0
     lines = raw.map((l) => {
-      const p = products.find((x) => x.id === Number(l?.id))
+      const p = products.find((x) => x.id === String(l?.id))
       const qty = Number(l?.qty)
       if (!p || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) throw 0
       return { name: p.name, qty, price: p.price }

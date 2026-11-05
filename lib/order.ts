@@ -15,8 +15,12 @@ export type CakeDesign = {
   image: string | null
 }
 
-// Photos: Unsplash (free license), stored in /public/images/mau.
-export const cakeDesigns: CakeDesign[] = [
+/**
+ * Fallback designs, used when the "Mẫu bánh" sheet isn't set up or can't be read.
+ * The live list comes from Google Sheets — see lib/catalog.ts.
+ * Photos: Unsplash (free license), stored in /public/images/mau.
+ */
+export const defaultCakeDesigns: CakeDesign[] = [
   {
     id: "socola-chay",
     name: "Socola chảy",
@@ -52,16 +56,18 @@ export const cakeDesigns: CakeDesign[] = [
     priceFrom: 450000,
     image: "/images/mau/pastel-sinh-nhat.jpg",
   },
-  {
-    id: "mau-rieng",
-    name: "Theo mẫu riêng",
-    desc: "Mô tả ý tưởng ở ô ghi chú, tiệm sẽ báo giá.",
-    priceFrom: null,
-    image: null,
-  },
 ]
 
 export const CUSTOM_DESIGN_ID = "mau-rieng"
+
+/** Always shown last, after the designs from the sheet; enables photo upload. */
+export const customDesign: CakeDesign = {
+  id: CUSTOM_DESIGN_ID,
+  name: "Theo mẫu riêng",
+  desc: "Mô tả ý tưởng ở ô ghi chú, tiệm sẽ báo giá.",
+  priceFrom: null,
+  image: null,
+}
 
 /** Reference photos for a custom design (compressed in the browser before upload). */
 export const MAX_PHOTOS = 3

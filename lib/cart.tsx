@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from "react"
 
-import { products } from "@/lib/bakery-data"
+import type { Product } from "@/lib/bakery-data"
 import { MAX_QTY, type CartLine } from "@/lib/checkout"
 
 // ---------- Store (kept in localStorage so the cart survives reloads) ----------
@@ -22,9 +22,9 @@ const listeners = new Set<() => void>()
 function sanitize(value: unknown): CartLine[] {
   if (!Array.isArray(value)) return EMPTY
   return value.flatMap((l) => {
-    const id = Number(l?.id)
+    const id = l?.id == null ? "" : String(l.id)
     const qty = Math.min(MAX_QTY, Math.floor(Number(l?.qty)))
-    return products.some((p) => p.id === id) && qty > 0 ? [{ id, qty }] : []
+    return id && qty > 0 ? [{ id, qty }] : []
   })
 }
 
@@ -73,7 +73,7 @@ function getSnapshot() {
 const getServerSnapshot = () => EMPTY
 
 const actions = {
-  add(id: number, qty = 1) {
+  add(id: string, qty = 1) {
     const found = lines.find((l) => l.id === id)
     commit(
       found
@@ -83,7 +83,7 @@ const actions = {
         : [...lines, { id, qty: Math.min(MAX_QTY, qty) }]
     )
   },
-  setQty(id: number, qty: number) {
+  setQty(id: string, qty: number) {
     if (qty <= 0) return actions.remove(id)
     commit(
       lines.map((l) =>
@@ -91,7 +91,7 @@ const actions = {
       )
     )
   },
-  remove(id: number) {
+  remove(id: string) {
     commit(lines.filter((l) => l.id !== id))
   },
   clear() {
@@ -103,7 +103,7 @@ const actions = {
 
 type CartContextValue = typeof actions & {
   lines: CartLine[]
-  items: (CartLine & { product: (typeof products)[number] })[]
+  items: (CartLine & { product: Product })[]
   count: number
   subtotal: number
   open: boolean
@@ -112,7 +112,14 @@ type CartContextValue = typeof actions & {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  products,
+  children,
+}: {
+  /** Current menu; lines for items no longer on it are ignored. */
+  products: Product[]
+  children: React.ReactNode
+}) {
   const current = useSyncExternalStore(
     subscribe,
     getSnapshot,
@@ -127,14 +134,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     })
     return {
       ...actions,
-      lines: current,
+      // Only lines still on the menu (these are what checkout sends).
+      lines: items.map(({ id, qty }) => ({ id, qty })),
       items,
       count: items.reduce((s, i) => s + i.qty, 0),
       subtotal: items.reduce((s, i) => s + i.qty * i.product.price, 0),
       open,
       setOpen,
     }
-  }, [current, open])
+  }, [current, open, products])
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

@@ -7,17 +7,26 @@ import { SiteHeader } from "@/components/bakery/site-header"
 import { StorySection } from "@/components/bakery/story-section"
 import { VisitSection } from "@/components/bakery/visit-section"
 import { CartProvider } from "@/lib/cart"
+import { getCakeDesigns, getProducts } from "@/lib/catalog"
 
-export default function Page() {
+// Re-read the Google Sheets at most every 5 minutes (see lib/catalog.ts).
+export const revalidate = 300
+
+export default async function Page() {
+  const [products, designs] = await Promise.all([
+    getProducts(),
+    getCakeDesigns(),
+  ])
+
   return (
-    <CartProvider>
+    <CartProvider products={products}>
       <div className="min-h-svh bg-cream text-cocoa">
         <SiteHeader />
         <main>
-          <Hero />
-          <MenuSection />
+          <Hero featured={products[0]} />
+          <MenuSection products={products} />
           <StorySection />
-          <OrderSection />
+          <OrderSection designs={designs} />
           <VisitSection />
         </main>
         <footer className="border-t border-line">

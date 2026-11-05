@@ -1,17 +1,18 @@
 "use client"
 
-import Image from "next/image"
 import { useActionState, useState } from "react"
 import { Check, Sparkles } from "lucide-react"
 
 import { submitOrder } from "@/app/actions/order"
 import { formatPrice } from "@/lib/bakery-data"
+import { CakeLogo } from "./icons"
 import { PhotoPicker, type PickedPhoto } from "./photo-picker"
+import { SmartImage } from "./smart-image"
 import {
-  cakeDesigns,
   cakeSizes,
   CUSTOM_DESIGN_ID,
   initialOrderState,
+  type CakeDesign,
   type OrderField,
 } from "@/lib/order"
 import { cn } from "@/lib/utils"
@@ -26,7 +27,7 @@ const fieldClass =
   "min-h-11 box-border rounded-[14px] border-[1.5px] border-sand bg-white px-3.5 py-3 font-normal text-cocoa outline-none focus-visible:border-berry focus-visible:ring-2 focus-visible:ring-berry/30 aria-invalid:border-berry"
 const labelClass = "flex flex-col gap-1.5 text-[0.9rem] font-semibold"
 
-export function OrderSection() {
+export function OrderSection({ designs }: { designs: CakeDesign[] }) {
   const [photos, setPhotos] = useState<PickedPhoto[]>([])
   const [selected, setSelected] = useState("")
 
@@ -107,7 +108,7 @@ export function OrderSection() {
               Chọn mẫu bánh
             </legend>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {cakeDesigns.map((d) => (
+              {designs.map((d) => (
                 <label
                   key={d.id}
                   className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[18px] border-2 border-transparent bg-white transition-colors hover:border-sand has-checked:border-berry has-focus-visible:ring-2 has-focus-visible:ring-berry/40"
@@ -121,13 +122,18 @@ export function OrderSection() {
                     className="sr-only"
                   />
                   <span className="relative block aspect-square bg-blush">
-                    {d.image ? (
-                      <Image
+                    {d.id !== CUSTOM_DESIGN_ID ? (
+                      <SmartImage
                         src={d.image}
                         alt=""
                         fill
                         sizes="(min-width: 640px) 160px, 45vw"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        fallback={
+                          <span className="flex h-full items-center justify-center">
+                            <CakeLogo className="size-10 text-berry/70" />
+                          </span>
+                        }
                       />
                     ) : (
                       <span className="flex h-full items-center justify-center">

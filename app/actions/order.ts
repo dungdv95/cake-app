@@ -2,7 +2,6 @@
 
 import { formatPrice } from "@/lib/bakery-data"
 import {
-  cakeDesigns,
   cakeSizes,
   CUSTOM_DESIGN_ID,
   MAX_PHOTO_BYTES,
@@ -11,6 +10,7 @@ import {
   type OrderField,
   type OrderState,
 } from "@/lib/order"
+import { getCakeDesigns } from "@/lib/catalog"
 import {
   escapeHtml,
   formatDateVN,
@@ -44,7 +44,7 @@ export async function submitOrder(
 
   const errors: Partial<Record<OrderField, string>> = {}
 
-  const design = cakeDesigns.find((d) => d.id === fields.mau)
+  const design = (await getCakeDesigns()).find((d) => d.id === fields.mau)
   if (!design) {
     errors.mau = "Vui lòng chọn một mẫu bánh."
   }

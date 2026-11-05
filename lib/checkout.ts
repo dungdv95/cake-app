@@ -2,7 +2,7 @@
 
 export const MAX_QTY = 20
 
-export type CartLine = { id: number; qty: number }
+export type CartLine = { id: string; qty: number }
 
 export type FulfilmentId = "tai-tiem" | "giao-hang"
 

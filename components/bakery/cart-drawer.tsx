@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { useActionState, useState } from "react"
 import {
   ArrowLeft,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/sheet"
 import { formatPrice } from "@/lib/bakery-data"
 import { useCart } from "@/lib/cart"
+import { SmartImage } from "./smart-image"
 import {
   fulfilmentLabels,
   initialCheckoutState,
@@ -145,7 +145,7 @@ function CartView({ onCheckout }: { onCheckout: () => void }) {
         {items.map(({ id, qty, product }) => (
           <li key={id} className="flex gap-3 rounded-[20px] bg-white/70 p-2.5">
             <div className="relative size-20 flex-none overflow-hidden rounded-[14px] bg-butter">
-              <Image
+              <SmartImage
                 src={product.image}
                 alt=""
                 fill

@@ -1,10 +1,8 @@
 import Image from "next/image"
 
-import { formatPrice, products } from "@/lib/bakery-data"
+import { formatPrice, type Product } from "@/lib/bakery-data"
 
-const featured = products[0]
-
-export function Hero() {
+export function Hero({ featured }: { featured?: Product }) {
   return (
     <section
       id="top"
@@ -48,15 +46,19 @@ export function Hero() {
             className="object-cover"
           />
         </div>
-        <div className="absolute right-0 bottom-0 flex flex-col gap-1 rounded-3xl border border-line bg-cream px-6 py-5 shadow-[0_12px_32px_rgba(42,24,16,0.10)]">
-          <span className="text-[0.8rem] font-semibold tracking-[0.08em] text-berry uppercase">
-            Bánh của ngày
-          </span>
-          <span className="font-display text-[1.35rem] font-bold">
-            {featured.name}
-          </span>
-          <span className="text-cocoa-soft">{formatPrice(featured.price)}</span>
-        </div>
+        {featured && (
+          <div className="absolute right-0 bottom-0 flex flex-col gap-1 rounded-3xl border border-line bg-cream px-6 py-5 shadow-[0_12px_32px_rgba(42,24,16,0.10)]">
+            <span className="text-[0.8rem] font-semibold tracking-[0.08em] text-berry uppercase">
+              Bánh của ngày
+            </span>
+            <span className="font-display text-[1.35rem] font-bold">
+              {featured.name}
+            </span>
+            <span className="text-cocoa-soft">
+              {formatPrice(featured.price)}
+            </span>
+          </div>
+        )}
       </div>
     </section>
   )
