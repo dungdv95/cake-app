@@ -1,13 +1,23 @@
 "use client"
 
-import { useActionState } from "react"
+import Image from "next/image"
+import { useActionState, useState } from "react"
+import { Check, Sparkles } from "lucide-react"
 
 import { submitOrder } from "@/app/actions/order"
-import { cakeSizes, initialOrderState, type OrderField } from "@/lib/order"
+import { formatPrice } from "@/lib/bakery-data"
+import { PhotoPicker, type PickedPhoto } from "./photo-picker"
+import {
+  cakeDesigns,
+  cakeSizes,
+  CUSTOM_DESIGN_ID,
+  initialOrderState,
+  type OrderField,
+} from "@/lib/order"
 import { cn } from "@/lib/utils"
 
 const steps = [
-  "Gửi yêu cầu: ngày nhận, cỡ bánh, vị và lời chúc.",
+  "Chọn mẫu bánh, gửi ngày nhận, cỡ bánh, vị và lời chúc.",
   "Tiệm gọi lại để chốt mẫu và báo giá.",
   "Nhận bánh tại tiệm hoặc giao tận nơi.",
 ]
@@ -17,8 +27,24 @@ const fieldClass =
 const labelClass = "flex flex-col gap-1.5 text-[0.9rem] font-semibold"
 
 export function OrderSection() {
+  const [photos, setPhotos] = useState<PickedPhoto[]>([])
+  const [selected, setSelected] = useState("")
+
   const [state, formAction, pending] = useActionState(
-    submitOrder,
+    async (prev: typeof initialOrderState, formData: FormData) => {
+      // Attach the compressed photos (custom design only).
+      formData.delete("anh")
+      if (formData.get("mau") === CUSTOM_DESIGN_ID) {
+        photos.forEach((p) => formData.append("anh", p.file))
+      }
+      const result = await submitOrder(prev, formData)
+      if (result.status === "success") {
+        photos.forEach((p) => URL.revokeObjectURL(p.url))
+        setPhotos([])
+        setSelected("")
+      }
+      return result
+    },
     initialOrderState
   )
   const f = state.fields ?? {}
@@ -49,9 +75,7 @@ export function OrderSection() {
               </li>
             ))}
           </ol>
-          <p className="text-latte">
-            Vui lòng đặt trước ít nhất [SỐ NGÀY] ngày.
-          </p>
+          <p className="text-latte">Vui lòng đặt trước ít nhất 1 ngày.</p>
         </div>
 
         <form
@@ -74,6 +98,78 @@ export function OrderSection() {
               />
             </label>
           </div>
+
+          <fieldset
+            className="flex flex-col gap-2"
+            aria-describedby={state.errors?.mau ? "mau-error" : undefined}
+          >
+            <legend className="mb-2 text-[0.9rem] font-semibold">
+              Chọn mẫu bánh
+            </legend>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {cakeDesigns.map((d) => (
+                <label
+                  key={d.id}
+                  className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[18px] border-2 border-transparent bg-white transition-colors hover:border-sand has-checked:border-berry has-focus-visible:ring-2 has-focus-visible:ring-berry/40"
+                >
+                  <input
+                    type="radio"
+                    name="mau"
+                    value={d.id}
+                    defaultChecked={f.mau === d.id}
+                    onChange={() => setSelected(d.id)}
+                    className="sr-only"
+                  />
+                  <span className="relative block aspect-square bg-blush">
+                    {d.image ? (
+                      <Image
+                        src={d.image}
+                        alt=""
+                        fill
+                        sizes="(min-width: 640px) 160px, 45vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center">
+                        <Sparkles
+                          className="size-9 text-berry"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                      </span>
+                    )}
+                    <span className="absolute top-2 right-2 hidden size-7 items-center justify-center rounded-full bg-berry text-white shadow group-has-checked:flex">
+                      <Check className="size-4" aria-hidden="true" />
+                    </span>
+                  </span>
+                  <span className="flex flex-col gap-0.5 p-2.5">
+                    <span className="text-[0.9rem] leading-tight font-semibold">
+                      {d.name}
+                    </span>
+                    <span className="text-[0.8rem] font-normal text-cocoa-soft">
+                      {d.priceFrom
+                        ? `từ ${formatPrice(d.priceFrom)}`
+                        : "Báo giá sau"}
+                    </span>
+                    <span className="sr-only">{d.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <FieldError name="mau" error={state.errors?.mau} />
+            {selected === CUSTOM_DESIGN_ID && (
+              <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                <PhotoPicker
+                  photos={photos}
+                  onChange={setPhotos}
+                  error={state.errors?.anh}
+                />
+              </div>
+            )}
+            <p className="text-[0.8rem] text-cocoa-soft">
+              Giá tham khảo cho cỡ 16 cm, tiệm báo giá chính xác khi gọi lại.
+            </p>
+          </fieldset>
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
             <label className={labelClass}>
@@ -126,7 +222,7 @@ export function OrderSection() {
             <textarea
               rows={4}
               maxLength={1000}
-              placeholder="Ví dụ: cốt vani, kem dâu, ghi “Mừng sinh nhật Mẹ”"
+              placeholder="Ví dụ: cốt vani, kem dâu, ghi “Mừng sinh nhật Mẹ”. Chọn mẫu riêng thì mô tả ý tưởng ở đây."
               className={`${fieldClass} resize-y`}
               {...field("ghichu")}
             />

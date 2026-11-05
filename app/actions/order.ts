@@ -1,6 +1,16 @@
 "use server"
 
-import { cakeSizes, type OrderField, type OrderState } from "@/lib/order"
+import { formatPrice } from "@/lib/bakery-data"
+import {
+  cakeDesigns,
+  cakeSizes,
+  CUSTOM_DESIGN_ID,
+  MAX_PHOTO_BYTES,
+  MAX_PHOTOS,
+  PHOTO_TYPES,
+  type OrderField,
+  type OrderState,
+} from "@/lib/order"
 import {
   escapeHtml,
   formatDateVN,
@@ -24,14 +34,38 @@ export async function submitOrder(
   }
 
   const fields = {
+    mau: String(formData.get("mau") ?? "").trim(),
     ten: String(formData.get("ten") ?? "").trim(),
     sdt: String(formData.get("sdt") ?? "").trim(),
     ngay: String(formData.get("ngay") ?? "").trim(),
     co: String(formData.get("co") ?? "").trim(),
     ghichu: String(formData.get("ghichu") ?? "").trim(),
-  } satisfies Record<OrderField, string>
+  } satisfies Partial<Record<OrderField, string>>
 
   const errors: Partial<Record<OrderField, string>> = {}
+
+  const design = cakeDesigns.find((d) => d.id === fields.mau)
+  if (!design) {
+    errors.mau = "Vui lòng chọn một mẫu bánh."
+  }
+  const isCustom = design?.id === CUSTOM_DESIGN_ID
+  if (isCustom && fields.ghichu.length < 5) {
+    errors.ghichu = "Vui lòng mô tả mẫu bánh bạn muốn."
+  }
+
+  // Reference photos: only for a custom design.
+  const photos = isCustom
+    ? formData
+        .getAll("anh")
+        .filter((v): v is File => v instanceof File && v.size > 0)
+    : []
+  if (photos.length > MAX_PHOTOS) {
+    errors.anh = `Tối đa ${MAX_PHOTOS} ảnh.`
+  } else if (photos.some((p) => !PHOTO_TYPES.includes(p.type))) {
+    errors.anh = "Chỉ nhận ảnh JPG, PNG hoặc WebP."
+  } else if (photos.some((p) => p.size > MAX_PHOTO_BYTES)) {
+    errors.anh = "Ảnh quá lớn, vui lòng chọn ảnh khác."
+  }
 
   if (fields.ten.length < 2 || fields.ten.length > 80) {
     errors.ten = "Vui lòng nhập họ tên."
@@ -56,7 +90,7 @@ export async function submitOrder(
     errors.ghichu = "Ghi chú tối đa 1000 ký tự."
   }
 
-  if (Object.keys(errors).length > 0 || !phone) {
+  if (Object.keys(errors).length > 0 || !phone || !design) {
     return {
       status: "error",
       message: "Vui lòng kiểm tra lại thông tin.",
@@ -71,11 +105,15 @@ export async function submitOrder(
     `<b>Khách:</b> ${escapeHtml(fields.ten)}`,
     `<b>SĐT:</b> ${escapeHtml(phone)}`,
     `<b>Ngày nhận:</b> ${formatDateVN(fields.ngay)}`,
+    `<b>Mẫu:</b> ${design.name}${design.priceFrom ? ` (từ ${formatPrice(design.priceFrom)})` : " — báo giá sau"}`,
+    ...(photos.length > 0
+      ? [`<b>Ảnh mẫu:</b> ${photos.length} ảnh (gửi ngay bên dưới)`]
+      : []),
     `<b>Cỡ bánh:</b> ${escapeHtml(fields.co)}`,
     `<b>Vị & lời chúc:</b> ${fields.ghichu ? escapeHtml(fields.ghichu) : "—"}`,
   ].join("\n")
 
-  const result = await sendTelegram(text)
+  const result = await sendTelegram(text, photos)
   if (result !== "ok") {
     return { status: "error", message: sendErrorMessage[result], fields }
   }

@@ -10,7 +10,7 @@ const links = [
 
 export function SiteHeader() {
   return (
-    <header className="z-50 border-b border-line bg-cream/85 backdrop-blur-md supports-[backdrop-filter]:bg-cream/75 md:sticky md:top-0">
+    <header className="z-50 border-b border-line bg-cream/95 backdrop-blur-md supports-[backdrop-filter]:bg-cream/90 md:sticky md:top-0">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-[18px]">
         <a href="#top" className="flex items-center gap-2.5 text-cocoa">
           <span className="flex size-10 items-center justify-center rounded-full bg-sun">
